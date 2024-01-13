@@ -1,0 +1,45 @@
+name: "Terraform"
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  terraform:
+    name: "Terraform"
+    runs-on: ubuntu-latest
+    environment: tf
+    container: docker.io/tgoaz/ruby-dessert
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ROLE : ${{ secrets.AWS_ROLE }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+          terraform_wrapper: false
+      - name: Ruby test
+        run: |
+             bundle install
+
+      - name: Terraform Init
+        id: init
+        run: | 
+          mkdir $HOME/.aws/
+          echo [default] >> ~/.aws/credentials
+          echo aws_access_key_id = $AWS_ACCESS_KEY_ID >> ~/.aws/credentials
+          echo aws_secret_access_key = $AWS_SECRET_ACCESS_KEY >> ~/.aws/credentials
+          terraform init
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
